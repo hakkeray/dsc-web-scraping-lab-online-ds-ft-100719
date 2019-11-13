@@ -37,7 +37,10 @@ To start, write a function that extracts the titles of the books on a given page
 
 ```python
 def retrieve_titles(soup):
-    #Your code here
+    alert = soup.find('div', class_="alert alert-warning")
+    book = alert.nextSibling.nextSibling
+    titles = [h3.find('a').attrs['title'] for h3 in book.findAll('h3')]
+    return titles
 ```
 
 ## Retrieve Ratings
@@ -47,7 +50,15 @@ Next, write a similar function to retrieve the star ratings on a given page. Aga
 
 ```python
 def retrieve_ratings(soup):
-    #Your code here
+    alert = soup.find('div', class_="alert alert-warning")
+    book = alert.nextSibling.nextSibling
+    star_dict = {'One': 1, 'Two': 2, 'Three':3, 'Four': 4, 'Five':5}
+    star_ratings = []
+    regex = re.compile("star-rating (.*)")
+    for p in book.findAll('p', {"class" : regex}):
+        star_ratings.append(p.attrs['class'][-1])
+    star_ratings = [star_dict[s] for s in star_ratings]
+    return star_ratings
 ```
 
 ## Retrieve Prices
@@ -57,7 +68,11 @@ Now write a function to retrieve the prices on a given page. The function should
 
 ```python
 def retrieve_prices(soup):
-    #Your code here
+    alert = soup.find('div', class_="alert alert-warning")
+    book = alert.nextSibling.nextSibling
+    prices = [p.text for p in book.findAll('p', class_="price_color")]
+    prices = [float(p[1:]) for p in prices] #Removing the pound sign and converting to float
+    return prices
 ```
 
 ## Retrieve Availability
@@ -67,7 +82,10 @@ Write a function to retrieve whether each book is available or not. The function
 
 ```python
 def retrieve_availabilities(soup):
-    #Your code here
+    alert = soup.find('div', class_="alert alert-warning")
+    book = alert.nextSibling.nextSibling
+    avails = [a.text.strip() for a in book.findAll('p', class_="instock availability")]
+    return avails
 ```
 
 ## Create a Script to Retrieve All the Books From All 50 Pages
@@ -76,8 +94,107 @@ Finally, write a script to retrieve all of the information from all 50 pages of 
 
 
 ```python
-#Your code here
+import re
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+titles = []
+star_ratings = []
+prices = []
+avails = []
+for i in range(1,51):
+    if i == 1:
+        url = 'http://books.toscrape.com/'
+    else:
+            url = "http://books.toscrape.com/catalogue/page-{}.html".format(i)
+    html_page = requests.get(url)
+    soup = BeautifulSoup(html_page.content, 'html.parser')
+    titles += retrieve_titles(soup)
+    star_ratings += retrieve_ratings(soup)
+    prices += retrieve_prices(soup)
+    avails += retrieve_availabilities(soup)
 ```
+
+
+```python
+df = pd.DataFrame([titles, star_ratings, prices, avails]).transpose()
+df.columns = ['Title', 'Star_Rating', 'Price_(pounds)', 'Availability']
+print(len(df))
+df.head()
+```
+
+    1000
+
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Title</th>
+      <th>Star_Rating</th>
+      <th>Price_(pounds)</th>
+      <th>Availability</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>A Light in the Attic</td>
+      <td>3</td>
+      <td>51.77</td>
+      <td>In stock</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>Tipping the Velvet</td>
+      <td>1</td>
+      <td>53.74</td>
+      <td>In stock</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Soumission</td>
+      <td>1</td>
+      <td>50.1</td>
+      <td>In stock</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Sharp Objects</td>
+      <td>4</td>
+      <td>47.82</td>
+      <td>In stock</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Sapiens: A Brief History of Humankind</td>
+      <td>5</td>
+      <td>54.23</td>
+      <td>In stock</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
 
 ## Level-Up: Write a new version of the script you just wrote. 
 
